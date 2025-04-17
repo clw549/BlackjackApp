@@ -44,14 +44,14 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            app:srcCompat="@drawable/ic_card_foreground" />
+            app:srcCompat="@drawable/ic_placeholder_card" />
 
         <ImageView
             android:id="@+id/imageView7"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            app:srcCompat="@drawable/ic_card_foreground" />
+            app:srcCompat="@drawable/ic_placeholder_card" />
 
     </LinearLayout>
 
@@ -65,6 +65,7 @@
 
         <LinearLayout
             android:layout_width="match_parent"
+            android:layout_height="match_parent"
             android:orientation="horizontal">
 
             <ImageView
@@ -72,35 +73,35 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                tools:srcCompat="@drawable/ic_card_foreground" />
+                tools:srcCompat="@drawable/ic_placeholder_card" />
 
             <ImageView
                 android:id="@+id/imageView2"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:srcCompat="@drawable/ic_card_foreground" />
+                app:srcCompat="@drawable/ic_placeholder_card" />
 
             <ImageView
                 android:id="@+id/imageView3"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:srcCompat="@drawable/ic_card_foreground" />
+                app:srcCompat="@drawable/ic_placeholder_card" />
 
             <ImageView
                 android:id="@+id/imageView4"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:srcCompat="@drawable/ic_card_foreground" />
+                app:srcCompat="@drawable/ic_placeholder_card" />
 
             <ImageView
                 android:id="@+id/imageView5"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                app:srcCompat="@drawable/ic_card_foreground" />
+                app:srcCompat="@drawable/ic_placeholder_card" />
 
         </LinearLayout>
     </ScrollView>
