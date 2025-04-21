@@ -1,6 +1,6 @@
 package com.clw549.blackjackapp.data.database
-
-class BlackjackApp Application() {
+//TODO finish this
+class BlackjackApp : Application() {
     lateinit var repository: BlackjackRepository
     private set
 
