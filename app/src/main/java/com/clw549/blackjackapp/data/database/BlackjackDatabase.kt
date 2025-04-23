@@ -10,7 +10,7 @@ import com.clw549.blackjackapp.data.database.model.BlackjackGame
 abstract class BlackjackDatabase: RoomDatabase() {
 
     // Abstract function to get the DAO
-    abstract fun GameDao(): GameDao
+    abstract fun gameDao(): GameDao
 
     companion object {
         private var blackjackDatabase: BlackjackDatabase? = null

@@ -1,15 +1,18 @@
 package com.clw549.blackjackapp.data.database
-//TODO finish this
+
+import android.app.Application
+import com.clw549.blackjackapp.data.repository.BlackjackRepository
+
 class BlackjackApp : Application() {
     lateinit var repository: BlackjackRepository
-    private set
+        private set
 
-            override fun onCreate() {
+    override fun onCreate() {
         super.onCreate()
 
-        val database = RecipeDatabase.getInstance(this)
-        repository = RecipeRepository(
-            recipeDao = database.recipeDao()
+        val database = BlackjackDatabase.getInstance(this)
+        repository = BlackjackRepository(
+            gameDao = database.gameDao()
         )
     }
 }

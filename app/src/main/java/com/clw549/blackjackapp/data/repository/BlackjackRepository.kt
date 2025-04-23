@@ -1,5 +1,6 @@
 package com.clw549.blackjackapp.data.repository
 
+
 import android.app.Application
 import com.clw549.blackjackapp.data.database.BlackjackDatabase
 import com.clw549.blackjackapp.data.database.GameDao
@@ -11,13 +12,16 @@ class BlackjackRepository(private val gameDao: GameDao) {
 
     suspend fun addGame(playerPoints : Int)
     {
+        val game = BlackjackGame(playerPoints = playerPoints, hostPoints = 0, playerWin = true, numCards = 2)
+        gameDao.insertGame(game)
         //TODO insert game stats into game object
     }
 
-    suspend fun getGames() : Flow<List<BlackjackGame>> {
+    fun getGames() : Flow<List<BlackjackGame>> {
         return gameDao.getGames()
     }
 
+    //TODO finish or remove function
     suspend fun calculateStats() {
         val games : Flow<List<BlackjackGame>> = getGames()
         var totalPlayerPoints : Int = 0
