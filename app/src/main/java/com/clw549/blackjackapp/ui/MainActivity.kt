@@ -2,6 +2,7 @@ package com.clw549.blackjackapp.ui
 
 import android.os.Bundle
 import android.view.View
+import android.widget.Button
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -14,11 +15,15 @@ import com.clw549.blackjackapp.data.database.BlackjackDatabase
 import com.clw549.blackjackapp.data.repository.BlackjackRepository
 import com.clw549.blackjackapp.ui.viewModel.GameViewModel
 import com.clw549.blackjackapp.ui.viewModel.GameViewModelFactory
+import java.text.DecimalFormat
+import kotlin.random.Random
 
 class MainActivity : AppCompatActivity() {
+    private val format = DecimalFormat("#,##0.00")
 
     //var for querying the game database
     private lateinit var gameViewModel : GameViewModel
+
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -39,17 +44,33 @@ class MainActivity : AppCompatActivity() {
         // set the view model database variable we had earlier
         gameViewModel = ViewModelProvider(this, factory).get(GameViewModel::class.java)
 //TODO test the Room database with correct threading to not block the main UI thread
-//        gameViewModel.saveGame(21)
-//        gameViewModel.saveGame(2)
 
         val statsUi : TextView = findViewById(R.id.stats);
 
-        gameViewModel.average.observe(this) { averageObserver ->
-            statsUi.text = averageObserver.toString()
+        val hitButton : Button = findViewById(R.id.hit);
+        hitButton.setOnClickListener{hitClick()}
 
+        val standButton : Button = findViewById(R.id.stand)
+        standButton.setOnClickListener{standClick()}
+
+        gameViewModel.average.observe(this) { averageObserver ->
+            statsUi.text = "Game average: ${format.format(averageObserver)}"
+
+
+        }
+
+        gameViewModel.winRate.observe(this) {
         }
 
     }
 
+    fun hitClick() {
+
+    }
+
+    fun standClick() {
+        //TODO send game data to database to save the game
+        gameViewModel.getAverage()
+    }
 }
 

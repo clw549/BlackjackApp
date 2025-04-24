@@ -1,5 +1,6 @@
 package com.clw549.blackjackapp.ui.viewModel
 
+import androidx.annotation.WorkerThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -10,7 +11,9 @@ import com.clw549.blackjackapp.data.repository.BlackjackRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
 
@@ -18,36 +21,41 @@ class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
     private val _average = MutableLiveData<Double>();
     val average : LiveData<Double> get() = _average;
 
+    private val _winRate = MutableLiveData<Double>();
+    val winRate : LiveData<Double> get() = _winRate;
+
     //list of games to operate on
-    val games : LiveData<List<BlackjackGame>> = repository.getGames().asLiveData()
+    val games : Flow<List<BlackjackGame>> = repository.getGames()
     //val games : LiveData<List<BlackjackGame>> get() = _games;
 
     fun getStatistics() {
         //TODO
     }
 
-    suspend fun saveGame(points : Int) {
+    fun saveGame(points : Int) {
         println(points)
         viewModelScope.launch {
+            withContext(Dispatchers.IO) {
             repository.addGame(points)
-            getAverage()
+            getAverage() }
         }
     }
 
     fun getAverage() {
-        val currentGames : List<BlackjackGame>? = games.value
         var totalPlayerPoints : Double = 0.0
-        var counter : Double = 0.0
-        if (currentGames is List<BlackjackGame>) {
-            for (game in currentGames) {
-                totalPlayerPoints += game.playerPoints
-                counter++;
-                println("game printed");
-            }
-            _average.value = (totalPlayerPoints/counter)
-        }
-        println("printing getGames")
-        println(repository.getGames().asLiveData().value)
-    }
+        var counter : Int = 0
+        var winCounter : Int = 0
+        viewModelScope.launch {
 
+            games.collect { flowGames ->
+                for (flowGame in flowGames) {
+                    counter += 1;
+                    totalPlayerPoints += flowGame.playerPoints.toDouble()
+                    if (flowGame.playerWin) winCounter ++;
+                }
+                _average.value = (totalPlayerPoints/counter)
+                _winRate.value = (counter.toDouble()/winCounter.toDouble())
+            }
+        }
+    }
 }

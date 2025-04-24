@@ -2,6 +2,7 @@ package com.clw549.blackjackapp.data.repository
 
 
 import android.app.Application
+import androidx.annotation.WorkerThread
 import com.clw549.blackjackapp.data.database.BlackjackDatabase
 import com.clw549.blackjackapp.data.database.GameDao
 import com.clw549.blackjackapp.data.database.model.BlackjackGame
@@ -10,6 +11,7 @@ import retrofit2.Response
 
 class BlackjackRepository(private val gameDao: GameDao) {
 
+    @WorkerThread
     suspend fun addGame(playerPoints : Int)
     {
         val game = BlackjackGame(playerPoints = playerPoints, hostPoints = 0, playerWin = true, numCards = 2)
@@ -17,6 +19,7 @@ class BlackjackRepository(private val gameDao: GameDao) {
         //TODO insert game stats into game object
     }
 
+    @WorkerThread
     fun getGames() : Flow<List<BlackjackGame>> {
         return gameDao.getGames()
     }
