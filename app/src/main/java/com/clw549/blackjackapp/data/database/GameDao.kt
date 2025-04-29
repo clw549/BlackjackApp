@@ -18,4 +18,7 @@ interface GameDao {
 
     @Delete
     fun deleteGame(game: BlackjackGame)
+
+    @Query ("DELETE FROM BlackjackGames")
+    fun clearData()
 }

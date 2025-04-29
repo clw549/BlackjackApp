@@ -12,16 +12,20 @@ import retrofit2.Response
 class BlackjackRepository(private val gameDao: GameDao) {
 
     @WorkerThread
-    suspend fun addGame(playerPoints : Int)
+    suspend fun addGame(playerPoints : Int, hostPoints:Int, numCards:Int, playerWin:Boolean)
     {
-        val game = BlackjackGame(playerPoints = playerPoints, hostPoints = 0, playerWin = true, numCards = 2)
+        val game = BlackjackGame(playerPoints = playerPoints, hostPoints = hostPoints, playerWin = playerWin, numCards = numCards)
         gameDao.insertGame(game)
-        //TODO insert game stats into game object
     }
 
     @WorkerThread
     fun getGames() : Flow<List<BlackjackGame>> {
         return gameDao.getGames()
+    }
+
+    @WorkerThread
+    fun clearData() {
+        gameDao.clearData()
     }
 
     //TODO finish or remove function

@@ -43,6 +43,7 @@ class MainActivity : AppCompatActivity() {
     //and keeping track of how many cards have been dealt
     var score: Int = 0
     var cardCount: Int = 0
+    var houseScore: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,51 +92,10 @@ class MainActivity : AppCompatActivity() {
             statsUi.text = "Game average: ${format.format(averageObserver)}"
         }
 
-        gameViewModel.winRate.observe(this) {
-        }
+        val clearDataButton: Button = binding.clearData
+        clearDataButton.setOnClickListener{clearData()}
 
-
-        fun hitClick(cardIndex: Int): Thread {
-            return Thread {
-                val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
-                val connection = url.openConnection() as HttpURLConnection
-
-                if (connection.responseCode == 200) {
-                    val inputSystem = connection.inputStream
-                    val inputStreamReader = InputStreamReader(inputSystem, "UTF-8")
-                    val request = Gson().fromJson(inputStreamReader, CardResponse::class.java)
-
-                    when (cardIndex) {
-                        0 -> binding.DealtCard1.load(request.cards[0].image)
-
-                        1 -> binding.DealtCard2.load(request.cards[0].image)
-
-                        else -> {
-                            updateUserUI(request)
-                        }
-
-                    }
-
-                    inputStreamReader.close()
-                    inputSystem.close()
-
-                } else {
-                    runOnUiThread {
-                        Toast.makeText(this, "The call didn't work :(", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        }
-
-        //run hitClick twice to get the first two cards the dealer has in onCreate
-        val initialHitThread = hitClick(0)
-        initialHitThread.start()
-        ++cardCount
-
-
-        val initialHitThread2 = hitClick(1)
-        initialHitThread2.start()
-        ++cardCount
+        runHitClickStart()
 
         //this is for the hit button on click listener. when you hit, it will call the api
         //and put the card into a image view depending on where it is in the list
@@ -147,8 +107,66 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun runHitClickStart() {
+        //run hitClick twice to get the first two cards the dealer has in onCreate
+        val initialHitThread = hitClick(0)
+        initialHitThread.start()
+        ++cardCount
+
+
+        val initialHitThread2 = hitClick(1)
+        initialHitThread2.start()
+        ++cardCount
+
+        binding.HousePoints.text = houseScore.toString()
+    }
+
+    fun hitClick(cardIndex: Int): Thread {
+        // the calls should be done in a viewModel and observed into the view -ciaran
+        return Thread {
+            val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
+            val connection = url.openConnection() as HttpURLConnection
+
+            if (connection.responseCode == 200) {
+                val inputSystem = connection.inputStream
+                val inputStreamReader = InputStreamReader(inputSystem, "UTF-8")
+                val request = Gson().fromJson(inputStreamReader, CardResponse::class.java)
+
+
+
+                when (cardIndex) {
+                    0 -> {
+                        binding.DealtCard1.load(request.cards[0].image)
+                        houseScore += getCardValue(request.cards[0].value)
+                    }
+
+                    1 -> {
+                        binding.DealtCard2.load(request.cards[0].image)
+                        houseScore += getCardValue(request.cards[0].value)
+
+                    }
+
+                    else -> {
+                        updateUserUI(request)
+                    }
+
+                }
+
+                inputStreamReader.close()
+                inputSystem.close()
+
+
+            } else {
+                runOnUiThread {
+                    Toast.makeText(this, "The call didn't work :(", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
     private fun updateUserUI(request: CardResponse?) {
         runOnUiThread {
+
             if (request != null) {
                 val dealtCard = ImageView(this)
                 dealtCard.load(request.cards[0].image)
@@ -156,21 +174,42 @@ class MainActivity : AppCompatActivity() {
 
 
                 //this updates the score and deals with the face cards and aces
-                when (request.cards[0].value) {
-                    "ACE" -> score += 11
-                    "KING" -> score += 10
-                    "QUEEN" -> score += 10
-                    "JACK" -> score += 10
-                    else -> score += request.cards[0].value.toInt()
-                }
+                score += getCardValue(request.cards[0].value)
 
                 binding.scoreTextView.text = "Score: $score"
+                binding.HousePoints.text = houseScore.toString()
             }
         }
     }
 
+    fun getCardValue(card : String) :Int {
+        var cardValue = 0;
+        when (card) {
+            "ACE" -> cardValue = 11
+            "KING" -> cardValue = 10
+            "QUEEN" -> cardValue = 10
+            "JACK" -> cardValue = 10
+            else -> cardValue = card.toInt()
+        }
+        return cardValue;
+    }
+
     fun standClick() {
-        // TODO send game data to database to save the game
+        // subtract 2 from card count to get the number of cards the player had
+
+        gameViewModel.saveGame(score, houseScore, cardCount-2)
         gameViewModel.getAverage()
+        //game cleanup
+        cardCount = 0;
+        score = 0
+        houseScore = 0
+        binding.cardLinLayout.removeAllViewsInLayout();
+        runHitClickStart()
+        binding.HousePoints.text = houseScore.toString()
+
+    }
+
+    fun clearData() {
+        gameViewModel.clearData()
     }
 }

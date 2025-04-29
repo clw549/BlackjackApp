@@ -37,11 +37,11 @@ class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
         //TODO
     }
 
-    fun saveGame(points : Int) {
-        println(points)
+    fun saveGame(playerPoints : Int, hostPoints:Int, playerCards:Int) {
+        val playerWin:Boolean = (playerPoints<21)&&(playerPoints>hostPoints)
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-            repository.addGame(points)
+            repository.addGame(playerPoints, hostPoints, playerCards, playerWin)
             getAverage() }
         }
     }
@@ -60,6 +60,15 @@ class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
                 }
                 _average.value = (totalPlayerPoints/counter)
                 _winRate.value = (counter.toDouble()/winCounter.toDouble())
+            }
+        }
+    }
+
+    fun clearData() {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) {
+                repository.clearData()
+                getAverage()
             }
         }
     }
