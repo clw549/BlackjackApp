@@ -40,7 +40,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: GameLayoutBinding
 
     //global variable to help us with stuff like keeping score
+    //and keeping track of how many cards have been dealt
     var score: Int = 0
+    var cardCount: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,7 +56,7 @@ class MainActivity : AppCompatActivity() {
         val statsUi: TextView = binding.stats
         val hitButton: Button = binding.hit
         val standButton: Button = binding.stand
-        val cardsImageView : ScrollView = binding.scrollView2
+        val cardsImageView: ScrollView = binding.scrollView2
         val DealtCard1: ImageView = binding.DealtCard1
         val DealtCard2: ImageView = binding.DealtCard2
 //        val PlayerCard1: ImageView = binding.PlayerCard1
@@ -67,9 +69,6 @@ class MainActivity : AppCompatActivity() {
         //add the imageviews to different lists so I can iterate through them
 //        val playerCards = listOf(PlayerCard1, PlayerCard2, PlayerCard3, PlayerCard4, PlayerCard5)
         val dealtCards = listOf(DealtCard1, DealtCard2)
-
-        //variable to keep track of how many cards have been dealt
-        var cardCount: Int = 0
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.gameLayout)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -86,21 +85,6 @@ class MainActivity : AppCompatActivity() {
         gameViewModel = ViewModelProvider(this, factory).get(GameViewModel::class.java)
 //TODO test the Room database with correct threading to not block the main UI thread
 
-        //this is for the hit button on click listener. when you hit, it will call the api
-        //and put the card into a image view depending on where it is in the list
-        hitButton.setOnClickListener {
-            if(cardCount < 2) {
-                val hitThread = hitClick()
-                hitThread.start()
-                ++cardCount
-            }
-            else{
-                val hitThread = hitClick()
-                hitThread.start()
-                ++cardCount
-            }
-        }
-
         standButton.setOnClickListener { standClick() }
 
         gameViewModel.average.observe(this) { averageObserver ->
@@ -109,31 +93,61 @@ class MainActivity : AppCompatActivity() {
 
         gameViewModel.winRate.observe(this) {
         }
-    }
 
-    fun hitClick(): Thread {
-        return Thread {
-            val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
-            val connection = url.openConnection() as HttpURLConnection
 
-            if (connection.responseCode == 200) {
-                val inputSystem = connection.inputStream
-                val inputStreamReader = InputStreamReader(inputSystem, "UTF-8")
-                val request = Gson().fromJson(inputStreamReader, CardResponse::class.java)
+        fun hitClick(cardIndex: Int): Thread {
+            return Thread {
+                val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
+                val connection = url.openConnection() as HttpURLConnection
 
-                updateUI(request)
+                if (connection.responseCode == 200) {
+                    val inputSystem = connection.inputStream
+                    val inputStreamReader = InputStreamReader(inputSystem, "UTF-8")
+                    val request = Gson().fromJson(inputStreamReader, CardResponse::class.java)
 
-                inputStreamReader.close()
-                inputSystem.close()
-            } else {
-                runOnUiThread {
-                    Toast.makeText(this, "The call didn't work :(", Toast.LENGTH_SHORT).show()
+                    when (cardIndex) {
+                        0 -> binding.DealtCard1.load(request.cards[0].image)
+
+                        1 -> binding.DealtCard2.load(request.cards[0].image)
+
+                        else -> {
+                            updateUserUI(request)
+                        }
+
+                    }
+
+                    inputStreamReader.close()
+                    inputSystem.close()
+
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(this, "The call didn't work :(", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
         }
+
+        //run hitClick twice to get the first two cards the dealer has in onCreate
+        val initialHitThread = hitClick(0)
+        initialHitThread.start()
+        ++cardCount
+
+
+        val initialHitThread2 = hitClick(1)
+        initialHitThread2.start()
+        ++cardCount
+
+        //this is for the hit button on click listener. when you hit, it will call the api
+        //and put the card into a image view depending on where it is in the list
+        hitButton.setOnClickListener {
+            val hitThread = hitClick(cardCount)
+            hitThread.start()
+            ++cardCount
+
+        }
     }
 
-    private fun updateUI(request: CardResponse?) {
+    private fun updateUserUI(request: CardResponse?) {
         runOnUiThread {
             if (request != null) {
                 val dealtCard = ImageView(this)
