@@ -4,6 +4,8 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
@@ -52,17 +54,18 @@ class MainActivity : AppCompatActivity() {
         val statsUi: TextView = binding.stats
         val hitButton: Button = binding.hit
         val standButton: Button = binding.stand
+        val cardsImageView : ScrollView = binding.scrollView2
         val DealtCard1: ImageView = binding.DealtCard1
         val DealtCard2: ImageView = binding.DealtCard2
-        val PlayerCard1: ImageView = binding.PlayerCard1
-        val PlayerCard2: ImageView = binding.PlayerCard2
-        val PlayerCard3: ImageView = binding.PlayerCard3
-        val PlayerCard4: ImageView = binding.PlayerCard4
-        val PlayerCard5: ImageView = binding.PlayerCard5
+//        val PlayerCard1: ImageView = binding.PlayerCard1
+//        val PlayerCard2: ImageView = binding.PlayerCard2
+//        val PlayerCard3: ImageView = binding.PlayerCard3
+//        val PlayerCard4: ImageView = binding.PlayerCard4
+//        val PlayerCard5: ImageView = binding.PlayerCard5
         val scoreText: TextView = binding.scoreTextView
 
         //add the imageviews to different lists so I can iterate through them
-        val playerCards = listOf(PlayerCard1, PlayerCard2, PlayerCard3, PlayerCard4, PlayerCard5)
+//        val playerCards = listOf(PlayerCard1, PlayerCard2, PlayerCard3, PlayerCard4, PlayerCard5)
         val dealtCards = listOf(DealtCard1, DealtCard2)
 
         //variable to keep track of how many cards have been dealt
@@ -87,12 +90,12 @@ class MainActivity : AppCompatActivity() {
         //and put the card into a image view depending on where it is in the list
         hitButton.setOnClickListener {
             if(cardCount < 2) {
-                val hitThread = hitClick(dealtCards[cardCount])
+                val hitThread = hitClick()
                 hitThread.start()
                 ++cardCount
             }
             else{
-                val hitThread = hitClick(playerCards[cardCount-2])
+                val hitThread = hitClick()
                 hitThread.start()
                 ++cardCount
             }
@@ -108,7 +111,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun hitClick(DealtCard: ImageView): Thread {
+    fun hitClick(): Thread {
         return Thread {
             val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
             val connection = url.openConnection() as HttpURLConnection
@@ -118,7 +121,7 @@ class MainActivity : AppCompatActivity() {
                 val inputStreamReader = InputStreamReader(inputSystem, "UTF-8")
                 val request = Gson().fromJson(inputStreamReader, CardResponse::class.java)
 
-                updateUI(request, DealtCard)
+                updateUI(request)
 
                 inputStreamReader.close()
                 inputSystem.close()
@@ -130,10 +133,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun updateUI(request: CardResponse?, DealtCard: ImageView) {
+    private fun updateUI(request: CardResponse?) {
         runOnUiThread {
             if (request != null) {
-                DealtCard.load(request.cards[0].image)
+                val dealtCard = ImageView(this)
+                dealtCard.load(request.cards[0].image)
+                binding.cardLinLayout.addView(dealtCard)
+
 
                 //this updates the score and deals with the face cards and aces
                 when (request.cards[0].value) {
