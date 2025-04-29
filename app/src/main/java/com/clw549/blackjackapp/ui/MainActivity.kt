@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
         val cardsImageView: ScrollView = binding.scrollView2
         val DealtCard1: ImageView = binding.DealtCard1
         val DealtCard2: ImageView = binding.DealtCard2
+        val HousePoints:TextView = binding.HousePoints
 //        val PlayerCard1: ImageView = binding.PlayerCard1
 //        val PlayerCard2: ImageView = binding.PlayerCard2
 //        val PlayerCard3: ImageView = binding.PlayerCard3
@@ -92,10 +93,22 @@ class MainActivity : AppCompatActivity() {
             statsUi.text = "Game average: ${format.format(averageObserver)}"
         }
 
+        gameViewModel.houseHand.observe(this) { houseHandObs ->
+            if (houseHandObs.size > 1) {
+                DealtCard1.load(houseHandObs[0]?.image)
+                DealtCard2.load(houseHandObs[1]?.image)
+            }
+        }
+
+        gameViewModel.housePoints.observe(this) { housePointsObs ->
+            HousePoints.text = "House points: ${housePointsObs}"
+        }
+
         val clearDataButton: Button = binding.clearData
         clearDataButton.setOnClickListener{clearData()}
-
-        runHitClickStart()
+// OLD METHOD OF STARTING GAME
+//        runHitClickStart()
+        gameViewModel.initHouseHand()
 
         //this is for the hit button on click listener. when you hit, it will call the api
         //and put the card into a image view depending on where it is in the list
@@ -118,7 +131,6 @@ class MainActivity : AppCompatActivity() {
         initialHitThread2.start()
         ++cardCount
 
-        binding.HousePoints.text = houseScore.toString()
     }
 
     fun hitClick(cardIndex: Int): Thread {
@@ -134,23 +146,7 @@ class MainActivity : AppCompatActivity() {
 
 
 
-                when (cardIndex) {
-                    0 -> {
-                        binding.DealtCard1.load(request.cards[0].image)
-                        houseScore += getCardValue(request.cards[0].value)
-                    }
-
-                    1 -> {
-                        binding.DealtCard2.load(request.cards[0].image)
-                        houseScore += getCardValue(request.cards[0].value)
-
-                    }
-
-                    else -> {
-                        updateUserUI(request)
-                    }
-
-                }
+                updateUserUI(request)
 
                 inputStreamReader.close()
                 inputSystem.close()
@@ -177,7 +173,6 @@ class MainActivity : AppCompatActivity() {
                 score += getCardValue(request.cards[0].value)
 
                 binding.scoreTextView.text = "Score: $score"
-                binding.HousePoints.text = houseScore.toString()
             }
         }
     }
@@ -204,8 +199,7 @@ class MainActivity : AppCompatActivity() {
         score = 0
         houseScore = 0
         binding.cardLinLayout.removeAllViewsInLayout();
-        runHitClickStart()
-        binding.HousePoints.text = houseScore.toString()
+        gameViewModel.initHouseHand()
 
     }
 
