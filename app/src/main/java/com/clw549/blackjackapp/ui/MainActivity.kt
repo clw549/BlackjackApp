@@ -20,6 +20,7 @@ import com.clw549.blackjackapp.R
 import com.clw549.blackjackapp.data.database.BlackjackDatabase
 import com.clw549.blackjackapp.data.repository.BlackjackRepository
 import com.clw549.blackjackapp.databinding.GameLayoutBinding
+import com.clw549.blackjackapp.network.RetrofitClient
 import com.clw549.blackjackapp.network.model.CardResponse
 import com.clw549.blackjackapp.ui.viewModel.GameViewModel
 import com.clw549.blackjackapp.ui.viewModel.GameViewModelFactory
@@ -32,6 +33,7 @@ import java.net.URL
 import java.text.DecimalFormat
 import kotlin.random.Random
 import kotlinx.coroutines.withContext
+import okhttp3.internal.wait
 
 class MainActivity : AppCompatActivity() {
     private val format = DecimalFormat("#,##0.00")
@@ -84,11 +86,13 @@ class MainActivity : AppCompatActivity() {
         val recipeDatabase = BlackjackDatabase.getInstance(application)
         // get repository for the database
         val repository = BlackjackRepository(recipeDatabase.gameDao())
+        //getting retrofit
+        val retrofit = RetrofitClient
+
         // get the view model factory and give it the database repository
-        val factory = GameViewModelFactory(repository)
+        val factory = GameViewModelFactory(repository, retrofit)
         // set the view model database variable we had earlier
         gameViewModel = ViewModelProvider(this, factory).get(GameViewModel::class.java)
-//TODO test the Room database with correct threading to not block the main UI thread
 
         standButton.setOnClickListener { standClick() }
 
@@ -105,6 +109,18 @@ class MainActivity : AppCompatActivity() {
 
         gameViewModel.housePoints.observe(this) { housePointsObs ->
             HousePoints.text = "House points: ${housePointsObs}"
+            houseScore = housePointsObs
+        }
+
+        gameViewModel.playerCards.observe(this) { card ->
+            val dealtCard = ImageView(this)
+            dealtCard.load(card.image)
+            binding.cardLinLayout.addView(dealtCard)
+        }
+
+        gameViewModel.playerPoints.observe(this) { playerPoints ->
+            binding.scoreTextView.text = "Score: $playerPoints"
+
         }
 
         val clearDataButton: Button = binding.clearData
@@ -130,15 +146,14 @@ class MainActivity : AppCompatActivity() {
     fun hitClick(cardIndex: Int){
         // the calls should be done in a viewModel and observed into the view -ciaran
             //new lifecycle so we can use the suspend function
-            lifecycleScope.launch {
 
                 //get a card from the API
-                val request: CardResponse? = getCard()
+        val request: CardResponse? = gameViewModel.getCard()
 
                 //update the UI with the card
-                updateUserUI(request)
+        // updateUserUI(request)
 
-            }
+
     }
 
     private fun updateUserUI(request: CardResponse?) {
@@ -172,13 +187,10 @@ class MainActivity : AppCompatActivity() {
 
     fun resetGame() {
         //reset the game
-        //gameViewModel.saveGame(score, houseScore, cardCount)
-        //gameViewModel.getAverage()
+        gameViewModel.saveGame()
         //game cleanup
-        cardCount = 0;
-        score = 0
-        houseScore = 0
         binding.cardLinLayout.removeAllViewsInLayout();
+        binding.HousePoints.text = "House points: 0"
         gameViewModel.initHouseHand()
         binding.scoreTextView.text = "Score: 0"
     }
@@ -188,53 +200,34 @@ class MainActivity : AppCompatActivity() {
         //save the current score in a variable
         var playerScore: Int = score;
 
-        //set up a lifecycle scope
-        lifecycleScope.launch {
+        // house turn to pull cards
+        gameViewModel.housePullCards()
 
-            //reset the current score to the house points, and the card count to 0
-            score = gameViewModel.housePoints.value ?: 0;
-            cardCount = 0;
-
-            //remove all the cards from the screen aside from the first two
-            binding.cardLinLayout.removeAllViewsInLayout();
-
-            //while the score (which will now be the score the house has) is less than 17
-            //hit the house
-            while (score < 17) {
-                val cardResponse = getCard()
-                if (cardResponse != null) {
-                    // Update score and UI in the same coroutine
-                    //score += getCardValue(cardResponse.cards[0].value)
-                    updateUserUI(cardResponse)
-                }
-            }
-            //end the lifecycle scope
-        }
+        houseScore = gameViewModel.housePoints.value!!
+        playerScore = gameViewModel.playerPoints.value!!
 
         //if the playerScore is greater than the house score, and the player score is less than 21
         //then the player wins
-        if (playerScore > score && playerScore <= 21) {
+
+        //lose conditions
+        if ((playerScore < houseScore && houseScore <= 21) || playerScore > 21) {
+            Toast.makeText(this, "You lose!", Toast.LENGTH_SHORT).show()
+        } else if (playerScore > houseScore || houseScore > 21) {
             Toast.makeText(this, "You win!", Toast.LENGTH_SHORT).show()
-        } else if (playerScore == score) {
-            //if the player score is equal to the house score, its a draw
+        } else if (houseScore == playerScore){
             Toast.makeText(this, "Draw!", Toast.LENGTH_SHORT).show()
-        } else if ((playerScore > 21 && score > 21)) {
-            //if both the player and the house go over 21, that's a draw
-            Toast.makeText(this, "Draw!", Toast.LENGTH_SHORT).show()
-        } else if (playerScore > 21 && score <= 21 ) {
-            //if the player score is greater than 21, and the house score is less
-            // than or equal to 21 then the player loses
-            Toast.makeText(this, "You lose!", Toast.LENGTH_SHORT).show()
-        } else if (score > playerScore && score <= 21) {
-            //if the house score is greater than the player score, then the house wins
-            Toast.makeText(this, "You lose!", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(this, "Unkown winner", Toast.LENGTH_SHORT).show()
         }
 
+        resetGame()
     }
 
     //function to get a fetch a card from the api
     private suspend fun getCard(): CardResponse? {
+        //TODO put this functionality into GameViewModel, and call it from there
         return withContext(Dispatchers.IO) {
+            //TODO this URL and connection opeing should be from the network module (RetrofitClient)
             val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
             val connection = url.openConnection() as HttpURLConnection
 

@@ -15,7 +15,7 @@ object RetrofitClient {
             .build()
     }
 
-    // Expose the DogApiService instance
+    // Expose the ApiService instance
     val apiService: CardApiService by lazy {
         retrofit.create(CardApiService::class.java)
     }

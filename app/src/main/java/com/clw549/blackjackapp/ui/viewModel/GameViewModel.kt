@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewModelScope
 import com.clw549.blackjackapp.data.database.model.BlackjackGame
 import com.clw549.blackjackapp.data.repository.BlackjackRepository
@@ -18,11 +19,14 @@ import com.clw549.blackjackapp.network.RetrofitClient
 import com.clw549.blackjackapp.network.model.Card
 import com.clw549.blackjackapp.network.model.CardResponse
 import com.google.gson.Gson
+import kotlinx.coroutines.awaitAll
+import retrofit2.Retrofit
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
-class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
+class GameViewModel(private val repository: BlackjackRepository,
+                    private val retrofit: RetrofitClient) : ViewModel() {
 
     //average value for the UI
     private val _average = MutableLiveData<Double>();
@@ -44,41 +48,45 @@ class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
     private val _housePoints = MutableLiveData<Int>()
     val housePoints : LiveData<Int> get() = _housePoints
 
+    private val _playerPoints = MutableLiveData<Int>()
+    val playerPoints : LiveData<Int> get() = _playerPoints
+
+    private val _playerCards = MutableLiveData<Card>()
+    val playerCards : LiveData<Card> get() = _playerCards
+
+    private val _playerCardNum = MutableLiveData<Int>()
+    val playerCardNum : LiveData<Int> get() = _playerCardNum
+
     fun initHouseHand() {
+        _housePoints.value = 0
+        _playerPoints.value = 0
+        _playerCardNum.value = 0
+
         var request : CardResponse? = null
         var totalPoints : Int = 0
         viewModelScope.launch {
-            withContext(Dispatchers.IO) {
-                val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=2")
-                val connection = url.openConnection() as HttpURLConnection
-
-                if (connection.responseCode == 200) {
-                    val inputSystem = connection.inputStream
-                    val inputStreamReader = InputStreamReader(inputSystem, "UTF-8")
-                    request = Gson().fromJson(inputStreamReader, CardResponse::class.java)
-
-                    inputStreamReader.close()
-                    inputSystem.close()
-
-                }
-            }
-           withContext(Dispatchers.Main) {
-               if (request != null) {
+            request = retrofit.apiService.getNumRandomCard(2)
+            withContext(Dispatchers.Main) {
+                if (request != null) {
                    _houseHand.value = request!!.cards
                    totalPoints = getCardValue(request!!.cards[0].value)
                    totalPoints += getCardValue(request!!.cards[1].value)
                    _housePoints.value = totalPoints
-               }
-           }
+                }
+            }
         }
     }
 
-    fun saveGame(playerPoints : Int, hostPoints:Int, playerCards:Int) {
-        val playerWin:Boolean = (playerPoints<21)&&(playerPoints>hostPoints)
+    fun saveGame() {
+        val pPoints = _playerPoints.value!!
+        val hPoints = _housePoints.value!!
+        val numCards = _playerCardNum.value!!
+        val playerWin:Boolean = (pPoints < 21)&&(pPoints > hPoints)
         viewModelScope.launch {
             withContext(Dispatchers.IO) {
-            repository.addGame(playerPoints, hostPoints, playerCards, playerWin)
-            getAverage() }
+                repository.addGame(pPoints, hPoints, numCards, playerWin)
+                getAverage()
+            }
         }
     }
 
@@ -99,6 +107,29 @@ class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
             }
         }
     }
+
+    fun getCard() : CardResponse?{
+        var cardRes: CardResponse? = null
+        var card : Card
+        var points = 0
+        var cardNum : Int = _playerCardNum.value!!
+        viewModelScope.launch {
+            cardRes = retrofit.apiService.getRandomCard()
+            if (cardRes != null && cardRes?.cards?.get(0) != null) {
+                card = cardRes!!.cards[0]
+                _playerCards.value = card
+                points = _playerPoints.value!!
+                points += getCardValue(card.value)
+                _playerPoints.value = points
+            }
+
+
+        }
+        cardNum += 1
+        _playerCardNum.value = cardNum
+        return cardRes;
+    }
+
 
     fun clearData() {
         viewModelScope.launch {
@@ -121,6 +152,21 @@ class GameViewModel(private val repository: BlackjackRepository) : ViewModel() {
         return cardValue;
     }
 
+    fun housePullCards() {
+        var newCard : Card
+        var cardRes : CardResponse?
+        var points = 0
+        viewModelScope.launch {
+            while (housePoints.value != null && housePoints.value!! < 17) {
+                cardRes = retrofit.apiService.getRandomCard()
+                if (cardRes != null) {
+                    newCard = cardRes!!.cards[0]
+                    points = _housePoints.value!!
+                    points += getCardValue(newCard.value)
+                    _housePoints.value = points
+                }
+            }
 
-
+        }
+    }
 }
