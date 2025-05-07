@@ -1,6 +1,7 @@
 package com.clw549.blackjackapp.ui
 
 import android.os.Bundle
+import android.os.SystemClock
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
@@ -57,7 +58,7 @@ class MainActivity : AppCompatActivity() {
         binding = GameLayoutBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Remove the manual findViewById calls; use binding instead
+        // Remove the manual findViewById calls; we're using binding instead
         val statsUi: TextView = binding.stats
         val hitButton: Button = binding.hit
         val standButton: Button = binding.stand
@@ -66,11 +67,7 @@ class MainActivity : AppCompatActivity() {
         val DealtCard1: ImageView = binding.DealtCard1
         val DealtCard2: ImageView = binding.DealtCard2
         val HousePoints:TextView = binding.HousePoints
-//        val PlayerCard1: ImageView = binding.PlayerCard1
-//        val PlayerCard2: ImageView = binding.PlayerCard2
-//        val PlayerCard3: ImageView = binding.PlayerCard3
-//        val PlayerCard4: ImageView = binding.PlayerCard4
-//        val PlayerCard5: ImageView = binding.PlayerCard5
+
         val scoreText: TextView = binding.scoreTextView
 
         //add the imageviews to different lists so I can iterate through them
@@ -82,10 +79,11 @@ class MainActivity : AppCompatActivity() {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
+
         // get a database instance
-        val recipeDatabase = BlackjackDatabase.getInstance(application)
+        val gameDatabase = BlackjackDatabase.getInstance(application)
         // get repository for the database
-        val repository = BlackjackRepository(recipeDatabase.gameDao())
+        val repository = BlackjackRepository(gameDatabase.gameDao())
         //getting retrofit
         val retrofit = RetrofitClient
 
@@ -125,8 +123,8 @@ class MainActivity : AppCompatActivity() {
 
         val clearDataButton: Button = binding.clearData
         clearDataButton.setOnClickListener{clearData()}
-// OLD METHOD OF STARTING GAME
-//        runHitClickStart()
+
+        //This initializes the house hand, and the game as a whole
         gameViewModel.initHouseHand()
 
         //this is for the hit button on click listener. when you hit, it will call the api
@@ -144,45 +142,10 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun hitClick(cardIndex: Int){
-        // the calls should be done in a viewModel and observed into the view -ciaran
-            //new lifecycle so we can use the suspend function
 
-                //get a card from the API
+        //get a card from the API
         val request: CardResponse? = gameViewModel.getCard()
 
-                //update the UI with the card
-        // updateUserUI(request)
-
-
-    }
-
-    private fun updateUserUI(request: CardResponse?) {
-        runOnUiThread {
-
-            if (request != null) {
-                val dealtCard = ImageView(this)
-                dealtCard.load(request.cards[0].image)
-                binding.cardLinLayout.addView(dealtCard)
-
-
-                //this updates the score and deals with the face cards and aces
-                score += getCardValue(request.cards[0].value)
-
-                binding.scoreTextView.text = "Score: $score"
-            }
-        }
-    }
-
-    fun getCardValue(card : String) :Int {
-        var cardValue = 0;
-        when (card) {
-            "ACE" -> cardValue = 11
-            "KING" -> cardValue = 10
-            "QUEEN" -> cardValue = 10
-            "JACK" -> cardValue = 10
-            else -> cardValue = card.toInt()
-        }
-        return cardValue;
     }
 
     fun resetGame() {
@@ -190,7 +153,8 @@ class MainActivity : AppCompatActivity() {
         gameViewModel.saveGame()
         //game cleanup
         binding.cardLinLayout.removeAllViewsInLayout();
-        binding.HousePoints.text = "House points: 0"
+
+        //deal a new house hand and reset the score
         gameViewModel.initHouseHand()
         binding.scoreTextView.text = "Score: 0"
     }
@@ -220,27 +184,9 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "Unkown winner", Toast.LENGTH_SHORT).show()
         }
 
+        SystemClock.sleep(3000);
+
         resetGame()
-    }
-
-    //function to get a fetch a card from the api
-    private suspend fun getCard(): CardResponse? {
-        //TODO put this functionality into GameViewModel, and call it from there
-        return withContext(Dispatchers.IO) {
-            //TODO this URL and connection opeing should be from the network module (RetrofitClient)
-            val url = URL("https://deckofcardsapi.com/api/deck/new/draw/?count=1")
-            val connection = url.openConnection() as HttpURLConnection
-
-            if (connection.responseCode == 200) {
-                connection.inputStream.use { inputStream ->
-                    InputStreamReader(inputStream, "UTF-8").use { reader ->
-                        Gson().fromJson(reader, CardResponse::class.java)
-                    }
-                }
-            } else {
-                null
-            }
-        }
     }
 
     fun clearData() {
